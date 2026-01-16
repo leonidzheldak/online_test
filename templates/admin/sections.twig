@@ -1,0 +1,184 @@
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<div class="container-fluid">
+    <div class="row">
+        <aside class="col-2 bg-light border-end vh-100 position-fixed" id="sidebar">
+            <ul class="nav flex-column gap-2 mt-3">
+                <li><a href="adminUsers.php" class="nav-link">👤 Пользователи</a></li>
+                <li><a href="adminTests.php" class="nav-link active">📚 Разделы тестов</a></li>
+                <li><a href="adminQuestions.php" class="nav-link">❓ Вопросы</a></li>
+            </ul>
+        </aside>
+
+        <main class="col-10 offset-2 p-4">
+            <h3>Разделы тестов</h3>
+            <table class="table table-bordered align-middle" id="sectionsTable">
+                <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Описание</th>
+                    <th>Редактировать</th>
+                    <th>Удалить</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for section in sections %}
+                    <tr data-id="{{ section.id }}" id="section-{{ section.id }}">
+                        <td>{{ section.title }}</td>
+                        <td>{{ section.description }}</td>
+                        <td><button class="btn btn-sm btn-primary editBtn">✏️</button></td>
+                        <td><button class="btn btn-sm btn-danger deleteBtn">🗑️</button></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            <hr>
+            <h4>Добавить новый раздел</h4>
+            <div class="row g-3 mb-4" id="createSectionForm">
+                <div class="col-4">
+                    <input type="text" class="form-control" id="newName" placeholder="Название" required>
+                </div>
+                <div class="col-4">
+                    <input type="text" class="form-control" id="newDescription" placeholder="Описание">
+                </div>
+                <div class="col-2">
+                    <button class="btn btn-success" id="createSectionBtn">Создать</button>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Модалка редактирования раздела -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать раздел</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editId">
+                <div class="mb-3">
+                    <label>Название</label>
+                    <input type="text" class="form-control" id="editName">
+                </div>
+                <div class="mb-3">
+                    <label>Описание</label>
+                    <input type="text" class="form-control" id="editDescription">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary updateSection">Сохранить</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('.bread_crumbs').html("ИБ Тестирование / Администрирование / <strong>Разделы тестов</strong>");
+
+        // Открытие модалки редактирования
+        $(document).on('click', '.editBtn', function(){
+            const row = $(this).closest('tr');
+            $('#editId').val(row.data('id'));        // берём ID из data-id
+            $('#editName').val(row.find('td:eq(0)').text());
+            $('#editDescription').val(row.find('td:eq(1)').text());
+            var modal = new bootstrap.Modal(document.getElementById('editModal'));
+            modal.show();
+        });
+
+        // Обновление раздела
+        $('.updateSection').on('click', function(){
+            const id = $('#editId').val();
+            const name = $('#editName').val();
+            const description = $('#editDescription').val();
+
+            if(!name){
+                alert('Название обязательно');
+                return;
+            }
+
+            $.ajax({
+                url: '../ajax.php',
+                method: 'POST',
+                dataType: 'json',
+                data: { action: 'edit_section', id, name, description },
+                success: function(res){
+                    if(res.success){
+                        const row = $('#sectionsTable tr[data-id="'+id+'"]');
+                        row.find('td:eq(0)').text(name);
+                        row.find('td:eq(1)').text(description);
+                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                    } else {
+                        alert(res.error || 'Ошибка при редактировании раздела');
+                    }
+                },
+                error: function(){ alert('Ошибка соединения с сервером'); }
+            });
+        });
+
+        // Удаление раздела
+        $(document).on('click', '.deleteBtn', function(){
+            if(!confirm('Удалить раздел?')) return;
+
+            const row = $(this).closest('tr');
+            const id = row.data('id');
+
+            $.ajax({
+                url: '../ajax.php',
+                method: 'POST',
+                dataType: 'json',
+                data: { action: 'delete_section', id },
+                success: function(res){
+                    if(res.success){
+                        row.remove();
+                    } else {
+                        alert(res.error || 'Ошибка при удалении раздела');
+                    }
+                },
+                error: function(){ alert('Ошибка соединения с сервером'); }
+            });
+        });
+
+        // Создание нового раздела
+        $('#createSectionBtn').on('click', function(){
+            const name = $('#newName').val();
+            const description = $('#newDescription').val();
+
+            if(!name){
+                alert('Название обязательно');
+                return;
+            }
+
+            $.ajax({
+                url: '../ajax.php',
+                method: 'POST',
+                dataType: 'json',
+                data: { action: 'create_section', name, description },
+                success: function(res){
+                    if(res.success){
+                        $('#sectionsTable tbody').append(`
+                        <tr data-id="${res.id}" id="section-${res.id}">
+                            <td>${name}</td>
+                            <td>${description}</td>
+                            <td><button class="btn btn-sm btn-primary editBtn">✏️</button></td>
+                            <td><button class="btn btn-sm btn-danger deleteBtn">🗑️</button></td>
+                        </tr>
+                    `);
+                        $('#newName').val('');
+                        $('#newDescription').val('');
+                    } else {
+                        alert(res.error || 'Ошибка при создании раздела');
+                    }
+                },
+                error: function(){ alert('Ошибка соединения с сервером'); }
+            });
+        });
+
+    });
+</script>

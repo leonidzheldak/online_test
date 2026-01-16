@@ -1,0 +1,17 @@
+.nav-link {
+    color: #333;
+}
+
+.nav-link:hover {
+    background: #f1f1f1;
+    border-radius: 6px;
+}
+body {
+    padding-top: 56px;
+}
+
+.nav-link.active {
+    background-color: #9eb3d5;
+    color: #fff !important;
+    border-radius: 5px;
+}

@@ -1,0 +1,300 @@
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<div class="container-fluid">
+    <div class="row">
+        <aside class="col-2 bg-light border-end vh-100 position-fixed" id="sidebar">
+            <ul class="nav flex-column gap-2 mt-3">
+                <li><a href="adminUsers.php" class="nav-link">👤 Пользователи</a></li>
+                <li><a href="adminTests.php" class="nav-link">📚 Разделы тестов</a></li>
+                <li><a href="adminQuestions.php" class="nav-link active">❓ Вопросы</a></li>
+            </ul>
+        </aside>
+
+        <main class="col-10 offset-2 p-4">
+            <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createQuestionModal">Добавить вопрос</button>
+
+            <div class="modal fade" id="createQuestionModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Создать вопрос</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label>Раздел</label>
+                                <select class="form-select" id="createQuestionSection">
+                                    {% for section in sections %}
+                                        <option value="{{ section.id }}">{{ section.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label>Тип вопроса</label>
+                                <select class="form-select" id="createQuestionType">
+                                    <option value="choice">Выбор одного ответа</option>
+                                    <option value="multiple_choice">Выбор нескольких ответов</option>
+                                    <option value="text">Текстовый</option>
+                                    <option value="sequence">Последовательный</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label>Текст вопроса</label>
+                                <input type="text" class="form-control" id="createQuestionText">
+                            </div>
+
+                            <div class="mb-3" id="createAnswersContainer">
+                                <label>Ответы</label>
+                            </div>
+
+                            <button type="button" class="btn btn-secondary mb-2" id="createAddAnswerBtn">Добавить ответ</button>
+
+                            <div class="mb-3">
+                                <label>Файлы</label>
+                                <input type="file" class="form-control" id="createQuestionFiles" multiple>
+                            </div>
+
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-success createQuestionBtn">Создать</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h3>Вопросы</h3>
+
+            <div class="accordion" id="sectionsAccordion">
+                {% for section in sections %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading-{{ section.id }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ section.id }}" aria-expanded="false" aria-controls="collapse-{{ section.id }}">
+                                {{ section.title }}
+                            </button>
+                        </h2>
+                        <div id="collapse-{{ section.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ section.id }}" data-bs-parent="#sectionsAccordion">
+                            <div class="accordion-body">
+                                <table class="table table-bordered align-middle questionsTable" data-section="{{ section.id }}">
+                                    <thead>
+                                    <tr>
+                                        <th>Вопрос</th>
+                                        <th>Ответ</th>
+                                        <th>Редактировать</th>
+                                        <th>Удалить</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for q in section.questions %}
+                                        <tr id="question-{{ q.id }}">
+                                            <td>{{ q.text }}</td>
+                                            <td>
+                                                {% if q.type in ['choice', 'multiple_choice'] %}
+                                                    <ul class="list-unstyled mb-0">
+                                                        {% for ans in q.answers %}
+                                                            <li class="{{ ans.is_correct ? 'text-success fw-bold' : '' }}">
+                                                                {{ ans.text }}
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                    {% elseif q.type == 'text' %}
+                                                    <div>{{ q.answer }}</div>
+                                                    {% elseif q.type == 'sequence' %}
+                                                    <ol>
+                                                        {% for ans in q.answers %}
+                                                            <li>{{ ans.text }}</li>
+                                                        {% endfor %}
+                                                    </ol>
+                                                {% endif %}
+                                                {% if q.files %}
+                                                    <div class="mt-1">
+                                                        {% for f in q.files %}
+                                                            {% if f.type == 'image' %}
+                                                                <img src="{{ f.url }}" class="img-thumbnail me-1" style="max-width:100px">
+                                                            {% else %}
+                                                                <a href="{{ f.url }}" target="_blank">{{ f.name }}</a>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary editBtn"
+                                                        data-id="{{ q.id }}" data-section="{{ section.id }}">✏️</button>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-danger deleteBtn"
+                                                        data-id="{{ q.id }}" data-section="{{ section.id }}">🗑️</button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="modal fade" id="editQuestionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать вопрос</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editQuestionId">
+                <input type="hidden" id="editQuestionSection">
+
+                <div class="mb-3">
+                    <label>Тип вопроса</label>
+                    <select class="form-select" id="editQuestionType">
+                        <option value="choice">Выбор одного ответа</option>
+                        <option value="multiple_choice">Выбор нескольких ответов</option>
+                        <option value="text">Текстовый</option>
+                        <option value="sequence">Последовательный</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Текст вопроса</label>
+                    <input type="text" class="form-control" id="editQuestionText">
+                </div>
+
+                <div class="mb-3" id="editAnswersContainer">
+                    <label>Ответы</label>
+                    <!-- JS динамически добавляет поля -->
+                </div>
+
+                <div class="mb-3">
+                    <label>Файлы</label>
+                    <input type="file" class="form-control" id="editQuestionFiles" multiple>
+                    <div id="existingFiles" class="mt-2">
+                        <!-- JS покажет существующие файлы с возможностью удалить -->
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-secondary mb-2" id="addAnswerBtn">Добавить ответ</button>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary updateQuestion">Сохранить</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('.bread_crumbs').html("ИБ Тестирование / Администрирование / <strong>Вопросы</strong>");
+
+        // Редактирование вопроса
+        $(document).on('click', '.editBtn', function(){
+            const id = $(this).data('id');
+            const sectionId = $(this).data('section');
+            const row = $(this).closest('tr');
+            $('#editQuestionId').val(id);
+            $('#editQuestionSection').val(sectionId);
+            $('#editQuestionText').val(row.find('td:eq(0)').text());
+            $('#editQuestionAnswer').val(row.find('td:eq(1)').text());
+            var modal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+            modal.show();
+        });
+
+        $('.updateQuestion').on('click', function(){
+            const id = $('#editQuestionId').val();
+            const sectionId = $('#editQuestionSection').val();
+            const text = $('#editQuestionText').val();
+            const answer = $('#editQuestionAnswer').val();
+
+            if(!text){
+                alert('Текст вопроса обязателен');
+                return;
+            }
+
+            $.ajax({
+                url: 'ajax.php',
+                method: 'POST',
+                dataType: 'json',
+                data: { action: 'edit_question', id, section_id: sectionId, text, answer },
+                success: function(res){
+                    if(res.success){
+                        const row = $('#question-' + id);
+                        row.find('td:eq(0)').text(text);
+                        row.find('td:eq(1)').text(answer);
+                        bootstrap.Modal.getInstance(document.getElementById('editQuestionModal')).hide();
+                    } else {
+                        alert(res.error || 'Ошибка при редактировании вопроса');
+                    }
+                },
+                error: function(){ alert('Ошибка соединения с сервером'); }
+            });
+        });
+
+        // Удаление вопроса
+        $(document).on('click', '.deleteBtn', function(){
+            if(!confirm('Удалить вопрос?')) return;
+            const id = $(this).data('id');
+            $.ajax({
+                url: 'ajax.php',
+                method: 'POST',
+                dataType: 'json',
+                data: { action: 'delete_question', id },
+                success: function(res){
+                    if(res.success){
+                        $('#question-' + id).remove();
+                    } else {
+                        alert(res.error || 'Ошибка при удалении вопроса');
+                    }
+                },
+                error: function(){ alert('Ошибка соединения с сервером'); }
+            });
+        });
+
+        // Создание нового вопроса
+        $(document).on('click', '.createQuestionBtn', function(){
+            const container = $(this).closest('.createQuestionForm');
+            const sectionId = container.data('section');
+            const text = container.find('.newQuestionText').val();
+            const answer = container.find('.newQuestionAnswer').val();
+
+            if(!text){
+                alert('Текст вопроса обязателен');
+                return;
+            }
+
+            $.ajax({
+                url: 'ajax.php',
+                method: 'POST',
+                dataType: 'json',
+                data: { action: 'create_question', section_id: sectionId, text, answer },
+                success: function(res){
+                    if(res.success){
+                        const tbody = $('table.questionsTable[data-section="'+sectionId+'"] tbody');
+                        tbody.append(`
+                        <tr id="question-${res.id}">
+                            <td>${text}</td>
+                            <td>${answer}</td>
+                            <td><button class="btn btn-sm btn-primary editBtn" data-id="${res.id}" data-section="${sectionId}">✏️</button></td>
+                            <td><button class="btn btn-sm btn-danger deleteBtn" data-id="${res.id}" data-section="${sectionId}">🗑️</button></td>
+                        </tr>
+                    `);
+                        container.find('.newQuestionText').val('');
+                        container.find('.newQuestionAnswer').val('');
+                    } else {
+                        alert(res.error || 'Ошибка при создании вопроса');
+                    }
+                },
+                error: function(){ alert('Ошибка соединения с сервером'); }
+            });
+        });
+
+    });
+</script>

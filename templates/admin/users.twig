@@ -1,0 +1,206 @@
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<div class="container-fluid">
+    <div class="row">
+        <aside class="col-2 bg-light border-end vh-100 position-fixed" id="sidebar">
+            <ul class="nav flex-column gap-2 mt-3">
+                <li><a href="adminUsers.php" class="nav-link active">👤 Пользователи</a></li>
+                <li><a href="adminTests.php" class="nav-link">📚 Разделы тестов</a></li>
+                <li><a href="adminQuestions.php" class="nav-link">❓ Вопросы</a></li>
+            </ul>
+        </aside>
+
+        <main class="col-10 offset-2 p-4">
+            <h3>Пользователи</h3>
+            <table class="table table-bordered align-middle" id="usersTable">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Редактировать</th>
+                    <th>Удалить</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for u in users %}
+                    <tr id="user-{{ u.id }}">
+                        <td>{{ u.id }}</td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.role }}</td>
+                        <td><button class="btn btn-sm btn-primary editBtn" data-id="{{ u.id }}">✏️</button></td>
+                        <td><button class="btn btn-sm btn-danger deleteBtn" data-id="{{ u.id }}">🗑️</button></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <hr>
+            <h4>Создать пользователя</h4>
+            <div class="row g-3 mb-4" id="createUserForm">
+                <div class="col-3">
+                    <input type="text" class="form-control" id="newEmail" placeholder="Email" required>
+                </div>
+                <div class="col-3">
+                    <input type="password" class="form-control" id="newPassword" placeholder="Пароль" required>
+                </div>
+                <div class="col-2">
+                    <select class="form-select" id="newRole">
+                        <option value="user">Пользователь</option>
+                        <option value="admin">Администратор</option>
+                    </select>
+                </div>
+                <div class="col-2">
+                    <button class="btn btn-success" id="createUserBtn">Создать</button>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать пользователя</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="id" id="editId">
+                <div class="mb-3">
+                    <label>Email</label>
+                    <input type="text" class="form-control" name="email" id="editEmail">
+                </div>
+                <div class="mb-3">
+                    <label>Пароль (если не менять, оставьте пустым)</label>
+                    <input type="password" class="form-control" name="password" id="editPassword">
+                </div>
+                <div class="mb-3">
+                    <label>Роль</label>
+                    <select class="form-select" name="role" id="editRole">
+                        <option value="user">Пользователь</option>
+                        <option value="admin">Администратор</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary updateUser">Сохранить</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('.bread_crumbs').html("ИБ Тестирование / Администрирование / <strong>Пользователи</strong>");
+        $(document).on('click', '.editBtn', function(){
+            const row = $(this).closest('tr');
+            $('#editId').val(row.find('td:eq(0)').text());
+            $('#editEmail').val(row.find('td:eq(1)').text());
+            $('#editRole').val(row.find('td:eq(2)').text());
+            $('#editPassword').val(''); // чистим поле пароля
+            var modal = new bootstrap.Modal(document.getElementById('editModal'));
+            modal.show();
+        });
+
+        $('.updateUser').on('click', function() {
+            const id = $('#editId').val();
+            const email = $('#editEmail').val();
+            const password = $('#editPassword').val();
+            const role = $('#editRole').val();
+
+            $.ajax({
+                url: '../ajax.php',
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'edit',
+                    id: id,
+                    email: email,
+                    password: password,
+                    role: role
+                },
+                success: function(res) {
+                    if(res.success) {
+                        const row = $('#user-' + id);
+                        row.find('td:eq(1)').text(email);
+                        row.find('td:eq(2)').text(role);
+
+                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                    } else {
+                        alert(res.error || 'Ошибка при редактировании пользователя');
+                    }
+                },
+                error: function(){
+                    alert('Ошибка соединения с сервером');
+                }
+            });
+        });
+
+        $(document).on('click', '.deleteBtn', function() {
+            if(!confirm('Удалить пользователя?')) return;
+
+            const id = $(this).data('id');
+            $.ajax({
+                url: '../ajax.php',
+                method: 'POST',
+                data: { action: 'delete', id: id },
+                dataType: 'json',
+                success: function(res) {
+                    if(res.success) {
+                        $('#user-' + id).remove();
+                    } else {
+                        alert(res.error || 'Ошибка при удалении пользователя');
+                    }
+                },
+                error: function() {
+                    alert('Ошибка соединения с сервером');
+                }
+            });
+        });
+
+        $('#createUserBtn').on('click', function(){
+            const email = $('#newEmail').val();
+            const password = $('#newPassword').val();
+            const role = $('#newRole').val();
+
+            if(!email || !password){
+                alert('Заполните Email и пароль');
+                return;
+            }
+
+            $.ajax({
+                url: '../ajax.php',
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'create',
+                    email: email,
+                    password: password,
+                    role: role
+                },
+                success: function(res){
+                    if(res.success){
+                        $('#usersTable tbody').append(`
+                    <tr id="user-${res.id}">
+                        <td>${res.id}</td>
+                        <td>${email}</td>
+                        <td>${role}</td>
+                        <td><button class="btn btn-sm btn-primary editBtn" data-id="${res.id}">✏️</button></td>
+                        <td><button class="btn btn-sm btn-danger deleteBtn" data-id="${res.id}">🗑️</button></td>
+                    </tr>
+                `);
+                        $('#newEmail').val('');
+                        $('#newPassword').val('');
+                        $('#newRole').val('user');
+                    } else {
+                        alert(res.error || 'Ошибка при создании пользователя');
+                    }
+                },
+                error: function(xhr){
+                    console.error(xhr.responseText);
+                    alert('Ошибка соединения с сервером');
+                }
+            });
+        });
+    });
+</script>
